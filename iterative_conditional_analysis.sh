@@ -195,7 +195,7 @@ awk '
 
 cat $output_folder/variants_from_significant_aggregates "$seed_condition_list" | awk 'NF>0' | sort -u > $output_folder/variants_for_conditional_plink_extract
 
-plink2 \
+./plink2 \
   --bfile "$bed_prefix" \
   --extract $output_folder/variants_for_conditional_plink_extract \
   --make-bed \
