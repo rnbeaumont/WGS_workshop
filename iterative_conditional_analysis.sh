@@ -180,7 +180,15 @@ current_regenie_output="$initial_regenie_file"
 log_file="$output_folder/conditional_analysis_iteration_log.txt"
 selected_aggregates_file="$output_folder/final_selected_aggregates_by_iteration.tsv"
 
-awk -v thresh="$sig_thresh" '$12>thresh && NR>2{print $3}' "$current_regenie_output" | tr '.' '\t' | cut -f 1-2 | sort | uniq | awk 'NF>1' > $output_folder/aggregates_significant_hits
+awk -v thresh="$sig_thresh" '
+  NR>2{
+    p=$12
+    lp=tolower(p)
+    if (p != "" && lp != "na" && lp != "nan" && lp != "-nan" && p+0==p && p>thresh) {
+      print $3
+    }
+  }
+' "$current_regenie_output" | tr '.' '\t' | cut -f 1-2 | sort | uniq | awk 'NF>1' > $output_folder/aggregates_significant_hits
 
 awk '
   BEGIN{FS="[ \t]+"}
@@ -195,7 +203,7 @@ awk '
 
 cat $output_folder/variants_from_significant_aggregates "$seed_condition_list" | awk 'NF>0' | sort -u > $output_folder/variants_for_conditional_plink_extract
 
-plink2 \
+./plink2 \
   --bfile "$bed_prefix" \
   --extract $output_folder/variants_for_conditional_plink_extract \
   --make-bed \
@@ -224,7 +232,15 @@ while true; do
   current_sig_variants="$output_folder/variants_from_significant_aggregates_iter_${iter}"
   current_sig_rare_variants="$output_folder/rare_variants_from_significant_aggregates_iter_${iter}"
 
-  awk -v thresh="$sig_thresh" '$12>thresh && NR>2{print $3}' "$current_regenie_output" | sort -u > "$current_sig_hits_all"
+  awk -v thresh="$sig_thresh" '
+    NR>2{
+      p=$12
+      lp=tolower(p)
+      if (p != "" && lp != "na" && lp != "nan" && lp != "-nan" && p+0==p && p>thresh) {
+        print $3
+      }
+    }
+  ' "$current_regenie_output" | sort -u > "$current_sig_hits_all"
 
   if [[ ! -s "$current_sig_hits_all" ]]; then
     echo "Iteration ${iter}: no significant aggregates in $current_regenie_output; stopping."
@@ -234,7 +250,15 @@ while true; do
   n_sig_aggregates=$(wc -l < "$current_sig_hits_all")
   last_nonempty_sig_output="$current_regenie_output"
 
-  awk -v thresh="$sig_thresh" '$12>thresh && NR>2{print $3"\t"$12}' "$current_regenie_output" | sort -k2,2gr | sed -n '1p' > "$current_top_aggregate_info"
+  awk -v thresh="$sig_thresh" '
+    NR>2{
+      p=$12
+      lp=tolower(p)
+      if (p != "" && lp != "na" && lp != "nan" && lp != "-nan" && p+0==p && p>thresh) {
+        print $3"\t"$12
+      }
+    }
+  ' "$current_regenie_output" | sort -k2,2gr | sed -n '1p' > "$current_top_aggregate_info"
 
   awk '{split($1,a,"."); if(length(a[1])>0 && length(a[2])>0){print a[1]"\t"a[2]}}' "$current_top_aggregate_info" > "$current_sig_hits"
 
