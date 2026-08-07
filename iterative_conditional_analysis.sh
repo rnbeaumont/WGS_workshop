@@ -193,13 +193,26 @@ awk -v thresh="$sig_thresh" '
 awk '
   BEGIN{FS="[ \t]+"}
   NR==FNR{
-    if(NF>=2){keep[$1"."$2]=1}
+    if(NF>=2){mask_lookup[$1]=$2}
+    next
+  }
+  FILENAME==ARGV[2]{
+    if(NF>=2){
+      mapped_cons = ($2 in mask_lookup ? mask_lookup[$2] : $2)
+      n_cons = split(mapped_cons, cons_list, ",")
+      for(i=1; i<=n_cons; i++){
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", cons_list[i])
+        if(length(cons_list[i])>0){
+          keep[$1"."cons_list[i]]=1
+        }
+      }
+    }
     next
   }
   ($2"."$3 in keep){
     print $1
   }
-' $output_folder/aggregates_significant_hits "$annotation_file" > $output_folder/variants_from_significant_aggregates
+' "$mask_file" $output_folder/aggregates_significant_hits "$annotation_file" > $output_folder/variants_from_significant_aggregates
 
 cat $output_folder/variants_from_significant_aggregates "$seed_condition_list" | awk 'NF>0' | sort -u > $output_folder/variants_for_conditional_plink_extract
 
@@ -274,13 +287,26 @@ while true; do
   awk '
     BEGIN{FS="[ \t]+"}
     NR==FNR{
-      if(NF>=2){keep[$1"."$2]=1}
+      if(NF>=2){mask_lookup[$1]=$2}
+      next
+    }
+    FILENAME==ARGV[2]{
+      if(NF>=2){
+        mapped_cons = ($2 in mask_lookup ? mask_lookup[$2] : $2)
+        n_cons = split(mapped_cons, cons_list, ",")
+        for(i=1; i<=n_cons; i++){
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", cons_list[i])
+          if(length(cons_list[i])>0){
+            keep[$1"."cons_list[i]]=1
+          }
+        }
+      }
       next
     }
     ($2"."$3 in keep){
       print $1
     }
-  ' "$current_sig_hits" "$annotation_file" | sort -u > "$current_sig_variants"
+  ' "$mask_file" "$current_sig_hits" "$annotation_file" | sort -u > "$current_sig_variants"
 
   awk '
     NR==FNR{rare[$1]=1; next}
